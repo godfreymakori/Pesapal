@@ -1,5 +1,5 @@
 {
-  "name": "godfreymakori/pesapal",
+  "name": "godfreymakori/laravelpesapal",
   "description": "A laravel package that integrates into the pesapal api",
   "keywords": [
     "pesapal",
