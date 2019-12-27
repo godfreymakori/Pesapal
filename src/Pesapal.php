@@ -164,7 +164,7 @@ class Pesapal implements PesapalContract
             curl_close($ch);
 
             if ($status == 'PENDING') {
-                sleep(60);
+                sleep(50);
                 redirectToIPN($pesapalNotification, $pesapal_merchant_reference, $pesapalTrackingId);
             }
 
