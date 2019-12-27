@@ -19,7 +19,6 @@ class Pesapal implements PesapalContract
     /**
      * Processes the payment to pesapal
      *
-     * @return pesapal_tracking_id
      */
 
     private $callback_route = '';
@@ -33,17 +32,17 @@ class Pesapal implements PesapalContract
     public function makePayment($params)
     {
         $defaults = [ // the defaults will be overidden if set in $params
-                      'amount' => '1',
-                      'description' => 'sample description',
-                      'type' => 'MERCHANT',
-                      'reference' => $this->random_reference(),
-                      'first_name' => 'John',
-                      'last_name' => 'Doe',
-                      'email' => 'johndoe@example.com',
-                      'currency' => 'KES',
-                      'phonenumber' => '254712345678',
-                      'width' => '100%',
-                      'height' => '100%',
+            'amount' => '1',
+            'description' => 'sample description',
+            'type' => 'MERCHANT',
+            'reference' => $this->random_reference(),
+            'first_name' => 'John',
+            'last_name' => 'Doe',
+            'email' => 'johndoe@example.com',
+            'currency' => 'KES',
+            'phonenumber' => '254712345678',
+            'width' => '100%',
+            'height' => '100%',
         ];
 
 
@@ -65,15 +64,23 @@ class Pesapal implements PesapalContract
 
         $token = NULL;
 
-        $consumer_key = config('pesapal.consumer_key');
+        if (!array_key_exists('consumer_key', $params)) {
+            $consumer_key = config('pesapal.consumer_key');
+        } else {
+            $consumer_key = $params['consumer_key'];
+        }
 
-        $consumer_secret = config('pesapal.consumer_secret');
+        if (!array_key_exists('consumer_secret', $params)) {
+            $consumer_secret = config('pesapal.consumer_secret');
+        } else {
+            $consumer_secret = $params['consumer_secret'];
+        }
 
         $signature_method = new OAuthSignatureMethod_HMAC_SHA1();
 
         $iframelink = $this->api_link('PostPesapalDirectOrderV4');
 
-        $callback_url = url('/') . '/pesapal-callback'; //redirect url, the page that will handle the response from pesapal.
+        $callback_url = url('') . '/pesapal-callback'; //redirect url, the page that will handle the response from pesapal.
 
         $post_xml = "<?xml version=\"1.0\" encoding=\"utf-8\"?>
                         <PesapalDirectOrderInfo 
@@ -113,9 +120,18 @@ class Pesapal implements PesapalContract
     function redirectToIPN($pesapalNotification, $pesapal_merchant_reference, $pesapalTrackingId)
     {
 
-        $consumer_key = config('pesapal.consumer_key');
+        $country_config = $this->get_country_config($pesapal_merchant_reference);
 
-        $consumer_secret = config('pesapal.consumer_secret');
+        if ($country_config) {
+            $consumer_key = $country_config['consumer_key'];
+
+            $consumer_secret = $country_config['consumer_secret'];
+        } else {
+            $consumer_key = config('pesapal.consumer_key');
+
+            $consumer_secret = config('pesapal.consumer_secret');
+        }
+
 
         $statusrequestAPI = $this->api_link('querypaymentdetails');
 
@@ -195,10 +211,18 @@ class Pesapal implements PesapalContract
      */
     function getMerchantStatus($pesapal_merchant_reference)
     {
+        $country_config = $this->get_country_config($pesapal_merchant_reference);
 
-        $consumer_key = config('pesapal.consumer_key');
+        if ($country_config) {
+            $consumer_key = $country_config['consumer_key'];
 
-        $consumer_secret = config('pesapal.consumer_secret');
+            $consumer_secret = $country_config['consumer_secret'];
+        } else {
+            $consumer_key = config('pesapal.consumer_key');
+
+            $consumer_secret = config('pesapal.consumer_secret');
+        }
+
 
         $statusrequestAPI = $this->api_link('querypaymentstatusbymerchantref');
 
@@ -273,6 +297,19 @@ class Pesapal implements PesapalContract
         $live = 'https://www.pesapal.com/api/';
         $demo = 'https://demo.pesapal.com/api/';
         return (config('pesapal.live') ? $live : $demo) . $path;
+    }
+
+    public function get_country_config($pesapal_merchant_reference)
+    {
+        $code = substr($pesapal_merchant_reference, 0, 2);
+        $code = strtoupper($code);
+
+        $config = config('pesapal.all');
+
+        if (isset($config[$code])) {
+            return $config[$code];
+        }
+        return null;
     }
 
 }
